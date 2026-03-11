@@ -1,0 +1,98 @@
+services:
+
+  # Kafka broker.
+  # This is the main event streaming server.
+  # Producer sends messages here, and consumer reads messages from here.
+  kafka:
+    image: apache/kafka:3.9.2
+    container_name: kafka
+    ports:
+      - "9092:9092"   # Kafka is available on localhost:9092
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      # This single Kafka instance acts as both:
+      # - broker: stores and serves messages
+      # - controller: manages Kafka metadata
+
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      # Internal listeners:
+      # - PLAINTEXT on 9092 for producer/consumer connections
+      # - CONTROLLER on 9093 for Kafka controller communication
+
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      # This is the address clients should use to connect to Kafka
+
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      # Maps listener names to security protocols
+      # Here everything is plain text, no authentication
+
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      # Tells Kafka which listener is used for the controller role
+
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      # Controller quorum configuration for KRaft mode
+      # Since this is standalone Kafka, there is only one controller node
+
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      # Replication factor for internal Kafka offsets topic
+      # 1 means only one copy, which is fine for a single-broker demo
+
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      # Replication factor for transaction state log
+      # Also set to 1 because there is only one broker
+
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      # Minimum in-sync replicas for transaction log
+      # Must be 1 in standalone mode
+
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      # Consumer groups start rebalancing immediately
+      # Useful for demos to reduce waiting time
+
+  # Kafka UI.
+  # Web interface for viewing topics, messages, offsets, and consumer groups.
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - "8080:8080"   # Kafka UI will open at http://localhost:8080
+    depends_on:
+      - kafka         # Start Kafka before Kafka UI
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      # Display name of this Kafka cluster inside Kafka UI
+
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      # Kafka UI connects to the Kafka container through Docker network
+
+  # PostgreSQL database.
+  # Consumer will store processed events here.
+  postgres:
+    image: postgres:16
+    container_name: postgres
+    ports:
+      - "5432:5432"   # PostgreSQL is available on localhost:5432
+    environment:
+      POSTGRES_DB: eventsdb
+      # Name of the database
+
+      POSTGRES_USER: eventsuser
+      # Database username
+
+      POSTGRES_PASSWORD: eventspass
+      # Database password
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      # On first startup PostgreSQL runs init.sql automatically
+      # This is where your events table will be created
+
+  # Grafana dashboard.
+  # Used to visualize data from PostgreSQL.
+  grafana:
+    image: grafana/grafana-oss:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"   # Grafana will open at http://localhost:3000
+    depends_on:
+      - postgres      # Start PostgreSQL before Grafana
