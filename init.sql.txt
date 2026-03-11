@@ -1,8 +1,10 @@
-CREATE TABLE IF NOT EXISTS events (
+DROP TABLE IF EXISTS events;
+
+CREATE TABLE events (
     id SERIAL PRIMARY KEY,
+    event_id TEXT,
+    user_ipaddress TEXT,
     event_name TEXT,
-    domain_userid TEXT,
-    page_view_id TEXT,
     dvce_created_tstamp TIMESTAMP,
     collector_tstamp TIMESTAMP,
     inserted_at TIMESTAMP DEFAULT NOW()

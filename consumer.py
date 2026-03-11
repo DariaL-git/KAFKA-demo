@@ -37,7 +37,7 @@ while True:
     cur.execute("""
     INSERT INTO events (
         event_id,
-        user_id,
+        user_ipaddress,
         event_name,
         dvce_created_tstamp,
         collector_tstamp
@@ -45,7 +45,7 @@ while True:
     VALUES (%s,%s,%s,%s,%s)
     """, (
     data["event_id"],
-    data["user_id"],
+    data["user_ipaddress"],
     data["event_name"],
     data["dvce_created_tstamp"],
     data["collector_tstamp"]
